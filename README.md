@@ -23,7 +23,8 @@ Server varsayılan olarak `3000` portunda çalışır. `PORT` değişkeniyle far
 - M3U/M3U8 playlist ekleme, yenileme ve silme
 - Kanal adı ve kategori filtresi
 - HLS ve native HLS oynatma
-- Playlist kayıtlarını tarayıcı `localStorage` alanında saklama
+- Playlist kayıtlarını cihazdaki IndexedDB alanında saklama
+- Büyük listelerde sanal kanal grid’i ile düşük DOM yükü
 - M3U/HLS kaynakları için aynı-origin proxy
 - `/health` sağlık endpoint’i
 
@@ -31,4 +32,4 @@ Server varsayılan olarak `3000` portunda çalışır. `PORT` değişkeniyle far
 
 Proje `Dockerfile` ile Node.js server olarak çalışır. GitHub repository’si kod deposudur; `/api/proxy` endpoint’i gerektiği için yalnızca GitHub Pages üzerinde yayınlanmamalıdır. Docker destekleyen bir Node.js hosting sağlayıcısı kullanılmalıdır.
 
-Proxy, loopback/private/link-local ağ hedeflerini, sınırsız redirect’leri ve uzun süren upstream isteklerini engeller. Public deployment öncesi hosting sağlayıcısında rate limit ve log izleme de etkinleştirilmelidir.
+Proxy, loopback/private/link-local ağ hedeflerini, sınırsız redirect’leri ve uzun süren upstream isteklerini engeller. Playlist metni ve kanal kartlarının gösterimi tarayıcı cihazında gerçekleşir; yayın akışının proxy üzerinden geçmesi gereken kaynaklarda Render bant genişliği kullanılır. Public deployment öncesi hosting sağlayıcısında rate limit ve log izleme de etkinleştirilmelidir.
