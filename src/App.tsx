@@ -81,7 +81,6 @@ function App() {
   const [awake, setAwake] = useState(true);
   const idleTimer = useRef<number>();
   const noticeTimer = useRef<number>();
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -123,11 +122,9 @@ function App() {
   const remove = (id: string) => { const rest = playlists.filter((p) => p.id !== id); setPlaylists(rest); if (activeId === id) { setActiveId(rest[0]?.id); setSelected(undefined); setCategory(ALL); } };
   const openList = (item: Playlist) => { setActiveId(item.id); setSelected(pickInitialChannel(item.channels)); setCategory(ALL); setQuery(""); setLibraryOpen(false); setPanelOpen(true); };
   const onPlayerError = useCallback((message: string) => show("error", message), []);
-  const onTouchStart = (event: React.TouchEvent) => { const touch = event.touches[0]; touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null; wake(); };
-  const onTouchEnd = (event: React.TouchEvent) => { const start = touchStart.current, touch = event.changedTouches[0]; touchStart.current = null; if (!start || !touch) return; const dx = touch.clientX - start.x, dy = Math.abs(touch.clientY - start.y); const horizontalSwipe = Math.abs(dx) > 86 && Math.abs(dx) > dy * 1.35; if (!horizontalSwipe) return; if (!panelOpen && start.x < 40 && dx > 86) setPanelOpen(true); };
 
   return <div className={`app ${awake || panelOpen || libraryOpen ? "" : "asleep"}`}>
-    <div className="stage" onPointerMove={wake} onPointerDown={wake} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <div className="stage" onPointerMove={wake} onPointerDown={wake}>
       <main className="screen"><Player channel={selected} onError={onPlayerError} /></main>
       {panelOpen && <button className="scrim" aria-label="Kanal listesini kapat" onClick={() => setPanelOpen(false)} />}
       <aside className={`panel ${panelOpen ? "open" : ""}`} aria-label="Kanal listesi">
