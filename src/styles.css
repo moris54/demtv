@@ -5,8 +5,9 @@
   --r-lg:20px;--r-md:14px;--r-sm:10px;
   font-family:Inter,system-ui,sans-serif;color:var(--text);background:var(--bg);font-synthesis:none;color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body,#root{height:100%;overscroll-behavior:none}
+html,body,#root{height:100%;min-height:100%;overscroll-behavior:none}
 body{margin:0;min-width:320px;overflow:hidden;background:var(--bg);touch-action:none}
+@supports (height:100dvh){html,body,#root,.app,.stage{height:100dvh}}
 button,input{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--ok);outline-offset:2px}
@@ -40,7 +41,7 @@ button{cursor:pointer}
 
 /* Channel panel */
 .scrim{position:absolute;inset:0;z-index:10;border:0;background:rgba(0,0,0,.4)}
-.panel{position:absolute;z-index:12;top:0;bottom:0;left:0;width:min(460px,100%);display:flex;flex-direction:column;background:rgba(14,21,28,.94);backdrop-filter:blur(24px);border-right:1px solid var(--line);box-shadow:24px 0 60px rgba(0,0,0,.45);transform:translateX(-102%);visibility:hidden;transition:transform .25s cubic-bezier(.2,.8,.2,1),visibility 0s .25s}
+.panel{position:absolute;z-index:12;top:0;bottom:0;left:0;width:min(460px,100%);display:flex;flex-direction:column;background:rgba(14,21,28,.94);backdrop-filter:blur(24px);border-right:1px solid var(--line);box-shadow:24px 0 60px rgba(0,0,0,.45);overscroll-behavior:contain;transform:translateX(-102%);visibility:hidden;transition:transform .25s cubic-bezier(.2,.8,.2,1),visibility 0s .25s}
 .panel.open{transform:none;visibility:visible;transition:transform .25s cubic-bezier(.2,.8,.2,1),visibility 0s}
 .panel-head{flex:none;display:flex;align-items:center;gap:4px;padding:16px 12px 10px 20px}
 .panel-title{flex:1;min-width:0}
@@ -89,7 +90,7 @@ button{cursor:pointer}
 
 /* Library modal */
 .modal-backdrop{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px;background:rgba(3,6,9,.74);backdrop-filter:blur(10px)}
-.modal{width:min(640px,100%);max-height:100%;overflow-y:auto;padding:22px;border-radius:var(--r-lg);background:var(--panel);border:1px solid var(--line);box-shadow:0 30px 90px rgba(0,0,0,.6)}
+.modal{width:min(640px,100%);max-height:100%;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;padding:22px;border-radius:var(--r-lg);background:var(--panel);border:1px solid var(--line);box-shadow:0 30px 90px rgba(0,0,0,.6)}
 .modal-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
 .modal-head h2{margin:0;font:600 24px 'Space Grotesk';letter-spacing:-.4px}
 .modal-head p{margin:5px 0 0;font-size:14px;color:var(--muted)}
@@ -114,6 +115,18 @@ button{cursor:pointer}
   .dock{left:12px;bottom:12px;max-width:calc(100% - 80px)}.dock-main{padding:0 14px 0 12px;height:48px}.dock-add{width:48px;height:48px}
   .now{max-width:34vw}.panel{width:100%;border-right:0}.virtual-row{right:0}.card{height:136px}.logo{padding:9px}
   .logo{padding:9px}.modal{padding:18px}.player-fullscreen-button{right:12px;bottom:12px}
+}
+@media(pointer:coarse){
+  .icon-btn{width:52px;height:52px}.icon-btn.sm{width:48px;height:48px}.search{height:54px}.search button{width:42px;height:42px}.chips button{height:46px;padding-inline:16px}.dock-main,.dock-add{height:56px}.dock-add{width:56px}.card{height:148px;padding:10px}.primary{height:54px}.list-main{min-height:52px}
+}
+@media(orientation:landscape) and (max-height:620px){
+  .panel{width:min(420px,48vw)}.panel-head{padding-top:max(8px,env(safe-area-inset-top));padding-bottom:6px}.eyebrow{font-size:9px;margin-bottom:2px}.panel-title h2{font-size:18px}.search{height:44px;margin-top:2px;margin-bottom:6px}.chips{padding-bottom:8px}.chips button{height:34px}.grid{padding-bottom:calc(16px + env(safe-area-inset-bottom))}.card{height:132px}.logo{padding:8px}.dock{bottom:max(10px,env(safe-area-inset-bottom))}
+}
+@media(min-width:900px) and (orientation:landscape){
+  .panel{width:min(440px,36vw)}
+}
+@media(orientation:portrait) and (max-width:900px){
+  .panel{width:100%}.dock{right:12px;max-width:none;justify-content:space-between}.now{max-width:42vw}.grid{padding-left:12px;padding-right:12px}
 }
 @media(max-height:480px){.panel-head{padding-top:8px}.search{margin-bottom:8px;height:42px}.chips{padding-bottom:8px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
