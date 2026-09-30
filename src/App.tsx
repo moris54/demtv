@@ -58,7 +58,8 @@ function VirtualChannelGrid({ channels, selected, onSelect }: { channels: Channe
   const onTouchMove = (event: React.TouchEvent<HTMLDivElement>) => { const touch = event.touches[0], grid = gridRef.current, start = touchScroll.current; if (!touch || !grid || !start) return; if (Math.abs(touch.clientY - start.y) > 8) suppressClick.current = true; event.preventDefault(); event.stopPropagation(); grid.scrollTop = start.top - (touch.clientY - start.y); };
   const onTouchEnd = () => { touchScroll.current = null; };
   const handleSelect = (channel: Channel) => { if (suppressClick.current) { suppressClick.current = false; return; } onSelect(channel); };
-  return <div className="grid" ref={gridRef} onScroll={(event) => setMetrics((current) => ({ ...current, scrollTop: event.currentTarget.scrollTop }))} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
+  const onScroll = (event: React.UIEvent<HTMLDivElement>) => { const scrollTop = event.currentTarget.scrollTop; setMetrics((current) => ({ ...current, scrollTop })); };
+  return <div className="grid" ref={gridRef} onScroll={onScroll} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
     {!channels.length ? <div className="empty-grid"><Search size={22} /><span>Sonuç bulunamadı</span><small>Arama veya kategori filtresini değiştirin.</small></div> : <div className="virtual-spacer" style={{ height: rows * rowHeight }}>
       {Array.from({ length: end - start }, (_, offset) => {
         const row = start + offset;
