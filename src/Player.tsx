@@ -32,12 +32,17 @@ export function Player({ channel, onError }: { channel?: Channel; onError: (mess
       }
       if (cancelled) return;
       if (isHls) {
-        const { default: HlsPlayer } = await import("hls.js");
-        if (cancelled) return;
-        if (!HlsPlayer.isSupported()) { onError("Bu tarayıcı HLS oynatmayı desteklemiyor."); return; }
-        hls = new HlsPlayer({ enableWorker: true, lowLatencyMode: true, backBufferLength: 30 });
-        hls.loadSource(sourceUrl); hls.attachMedia(video);
-        hls.on(HlsPlayer.Events.ERROR, (_event, data) => { if (data.fatal) window.setTimeout(() => { if (video.readyState < 2 && video.currentTime === 0) onError(`HLS oynatma hatası: ${data.details || "kaynak yanıt vermedi"}.`); }, 1200); });
+        const nativeHls = video.canPlayType("application/vnd.apple.mpegurl") || video.canPlayType("application/x-mpegURL");
+        if (nativeHls) {
+          video.src = sourceUrl;
+        } else {
+          const { default: HlsPlayer } = await import("hls.js");
+          if (cancelled) return;
+          if (!HlsPlayer.isSupported()) { onError("Bu tarayıcı HLS oynatmayı desteklemiyor."); return; }
+          hls = new HlsPlayer({ enableWorker: true, lowLatencyMode: true, backBufferLength: 30 });
+          hls.loadSource(sourceUrl); hls.attachMedia(video);
+          hls.on(HlsPlayer.Events.ERROR, (_event, data) => { if (data.fatal) window.setTimeout(() => { if (video.readyState < 2 && video.currentTime === 0) onError(`HLS oynatma hatası: ${data.details || "kaynak yanıt vermedi"}.`); }, 1200); });
+        }
       } else {
         video.src = sourceUrl;
       }
