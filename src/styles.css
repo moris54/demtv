@@ -14,7 +14,7 @@ button{cursor:pointer}
 .spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 
 .app{height:100%;width:100%;overflow:hidden}
-.stage{position:relative;height:100%;touch-action:pan-y}
+.stage{position:relative;height:100%;touch-action:auto}
 .screen{position:absolute;inset:0;background:#000}
 
 /* Player */
@@ -41,7 +41,7 @@ button{cursor:pointer}
 
 /* Channel panel */
 .scrim{position:absolute;inset:0;z-index:10;border:0;background:rgba(0,0,0,.4)}
-.panel{position:absolute;z-index:12;top:0;bottom:0;left:0;width:min(460px,100%);display:flex;flex-direction:column;background:rgba(14,21,28,.94);backdrop-filter:blur(24px);border-right:1px solid var(--line);box-shadow:24px 0 60px rgba(0,0,0,.45);overscroll-behavior:contain;touch-action:pan-y;transform:translateX(-102%);visibility:hidden;transition:transform .25s cubic-bezier(.2,.8,.2,1),visibility 0s .25s}
+.panel{position:absolute;z-index:12;top:0;bottom:0;left:0;width:min(460px,100%);display:flex;flex-direction:column;background:rgba(14,21,28,.94);backdrop-filter:blur(24px);border-right:1px solid var(--line);box-shadow:24px 0 60px rgba(0,0,0,.45);overscroll-behavior:contain;touch-action:auto;transform:translateX(-102%);visibility:hidden;transition:transform .25s cubic-bezier(.2,.8,.2,1),visibility 0s .25s}
 .panel.open{transform:none;visibility:visible;transition:transform .25s cubic-bezier(.2,.8,.2,1),visibility 0s}
 .panel-head{flex:none;display:flex;align-items:center;gap:4px;padding:16px 12px 10px 20px}
 .panel-title{flex:1;min-width:0}
@@ -67,7 +67,7 @@ button{cursor:pointer}
 .chips button.on small{color:#4b5a66}
 
 /* Stable channel grid: fixed column math, fixed card anatomy */
-.grid{position:relative;flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:stable;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:4px 10px 24px 16px;display:block}
+.grid{position:relative;flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:stable;overscroll-behavior:contain;-webkit-overflow-scrolling:auto;touch-action:none;padding:4px 10px 24px 16px;display:block}
 .grid::-webkit-scrollbar{width:6px}.grid::-webkit-scrollbar-thumb{background:rgba(160,188,210,.22);border-radius:6px}
 .virtual-spacer{position:relative;width:100%}.virtual-row{position:absolute;left:0;right:0;display:grid;align-items:start}.card{position:relative;min-width:0;min-height:44px;display:flex;flex-direction:column;gap:6px;height:144px;padding:8px 8px 9px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);text-align:center;user-select:none;transition:background .15s,border-color .15s}
 .card:hover{background:var(--card-hi)}

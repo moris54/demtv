@@ -34,6 +34,7 @@ const ChannelCard = ({ channel, selected, onSelect }: { channel: Channel; select
 
 function VirtualChannelGrid({ channels, selected, onSelect }: { channels: Channel[]; selected?: Channel; onSelect: (channel: Channel) => void }) {
   const gridRef = useRef<HTMLDivElement>(null);
+  const touchScroll = useRef<{ y: number; top: number } | null>(null);
   const [metrics, setMetrics] = useState({ width: 0, height: 0, scrollTop: 0 });
   useLayoutEffect(() => {
     const element = gridRef.current;
@@ -52,7 +53,10 @@ function VirtualChannelGrid({ channels, selected, onSelect }: { channels: Channe
   const rows = Math.ceil(channels.length / columns);
   const start = Math.max(0, Math.floor(metrics.scrollTop / rowHeight) - 3);
   const end = Math.min(rows, Math.ceil((metrics.scrollTop + metrics.height) / rowHeight) + 3);
-  return <div className="grid" ref={gridRef} onScroll={(event) => setMetrics((current) => ({ ...current, scrollTop: event.currentTarget.scrollTop }))}>
+  const onTouchStart = (event: React.TouchEvent<HTMLDivElement>) => { const touch = event.touches[0]; if (touch && gridRef.current) touchScroll.current = { y: touch.clientY, top: gridRef.current.scrollTop }; };
+  const onTouchMove = (event: React.TouchEvent<HTMLDivElement>) => { const touch = event.touches[0], grid = gridRef.current, start = touchScroll.current; if (!touch || !grid || !start) return; event.preventDefault(); event.stopPropagation(); grid.scrollTop = start.top - (touch.clientY - start.y); };
+  const onTouchEnd = () => { touchScroll.current = null; };
+  return <div className="grid" ref={gridRef} onScroll={(event) => setMetrics((current) => ({ ...current, scrollTop: event.currentTarget.scrollTop }))} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
     {!channels.length ? <div className="empty-grid"><Search size={22} /><span>Sonuç bulunamadı</span><small>Arama veya kategori filtresini değiştirin.</small></div> : <div className="virtual-spacer" style={{ height: rows * rowHeight }}>
       {Array.from({ length: end - start }, (_, offset) => {
         const row = start + offset;
