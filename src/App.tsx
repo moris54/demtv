@@ -85,7 +85,7 @@ function App() {
 
   useEffect(() => {
     let alive = true;
-    loadPlaylists<Playlist>().then((saved) => { if (!alive) return; const repaired = saved.map(repairPlaylist); setPlaylists(repaired); setActiveId(repaired[0]?.id); setPanelOpen(repaired.length === 0); setHydrated(true); });
+    loadPlaylists<Playlist>().then((saved) => { if (!alive) return; const repaired = saved.map(repairPlaylist); setPlaylists(repaired); setActiveId(repaired[0]?.id); setSelected(pickInitialChannel(repaired[0]?.channels || [])); setPanelOpen(true); setHydrated(true); });
     return () => { alive = false; };
   }, []);
   useEffect(() => { if (hydrated) void savePlaylists(playlists); }, [hydrated, playlists]);
@@ -98,6 +98,18 @@ function App() {
   const counts = useMemo(() => { const map = new Map<string, number>(); (active?.channels || []).forEach((c) => map.set(c.group || "Diğer", (map.get(c.group || "Diğer") || 0) + 1)); return map; }, [active]);
   const categories = useMemo(() => [ALL, ...Array.from(counts.keys()).sort((a, b) => a.localeCompare(b, "tr"))], [counts]);
   const channels = useMemo(() => { const q = tr(query.trim()); return (active?.channels || []).filter((c) => (category === ALL || c.group === category) && (!q || tr(c.name).includes(q))); }, [active, category, query]);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (libraryOpen || !channels.length || !["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft"].includes(event.key)) return;
+      event.preventDefault();
+      const current = Math.max(0, channels.findIndex((channel) => channel.id === selected?.id));
+      const direction = event.key === "ArrowDown" || event.key === "ArrowRight" ? 1 : -1;
+      setSelected(channels[(current + direction + channels.length) % channels.length]);
+      wake();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [channels, libraryOpen, selected, wake]);
   const show = (type: "error" | "success", text: string) => { setNotice({ type, text }); window.clearTimeout(noticeTimer.current); noticeTimer.current = window.setTimeout(() => setNotice(undefined), 5000); };
   const fetchList = async (sourceUrl: string) => { const response = await fetch(proxyUrl(sourceUrl)); if (!response.ok) throw new Error(`Liste alınamadı (${response.status}).`); return parseM3U(await response.text(), sourceUrl); };
   const addPlaylist = async () => {
@@ -112,7 +124,7 @@ function App() {
   const openList = (item: Playlist) => { setActiveId(item.id); setSelected(pickInitialChannel(item.channels)); setCategory(ALL); setQuery(""); setLibraryOpen(false); setPanelOpen(true); };
   const onPlayerError = useCallback((message: string) => show("error", message), []);
   const onTouchStart = (event: React.TouchEvent) => { const touch = event.touches[0]; touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null; wake(); };
-  const onTouchEnd = (event: React.TouchEvent) => { const start = touchStart.current, touch = event.changedTouches[0]; touchStart.current = null; if (!start || !touch) return; const dx = touch.clientX - start.x, dy = Math.abs(touch.clientY - start.y); if (dy > 60) return; if (!panelOpen && start.x < 40 && dx > 70) setPanelOpen(true); if (panelOpen && dx < -70) setPanelOpen(false); };
+  const onTouchEnd = (event: React.TouchEvent) => { const start = touchStart.current, touch = event.changedTouches[0]; touchStart.current = null; if (!start || !touch) return; const dx = touch.clientX - start.x, dy = Math.abs(touch.clientY - start.y); const horizontalSwipe = Math.abs(dx) > 86 && Math.abs(dx) > dy * 1.35; if (!horizontalSwipe) return; if (!panelOpen && start.x < 40 && dx > 86) setPanelOpen(true); };
 
   return <div className={`app ${awake || panelOpen || libraryOpen ? "" : "asleep"}`}>
     <div className="stage" onPointerMove={wake} onPointerDown={wake} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
@@ -120,7 +132,7 @@ function App() {
       {panelOpen && <button className="scrim" aria-label="Kanal listesini kapat" onClick={() => setPanelOpen(false)} />}
       <aside className={`panel ${panelOpen ? "open" : ""}`} aria-label="Kanal listesi">
         <header className="panel-head"><div className="panel-title"><div className="eyebrow">M3U STREAM PLAYER</div><h2>{active?.name ?? "Kanallar"}</h2><p>{active ? `${channels.length.toLocaleString("tr-TR")} / ${active.channels.length.toLocaleString("tr-TR")} kanal` : "Kişisel yayın kütüphanen"}</p></div><span className="status-pill"><i /> Cihazda</span><button className="icon-btn" onClick={() => setLibraryOpen(true)} aria-label="Listeleri yönet"><Library size={20} /></button><button className="icon-btn" onClick={() => setPanelOpen(false)} aria-label="Kapat"><X size={22} /></button></header>
-        {!hydrated ? <div className="loading-panel"><Loader2 className="spin" size={24} /><span>Kütüphanen hazırlanıyor…</span></div> : active ? <><label className="search"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Binlerce kanal içinde ara" type="search" enterKeyHint="search" />{query && <button type="button" onClick={() => setQuery("")} aria-label="Aramayı temizle"><X size={16} /></button>}</label><div className="chips">{categories.map((c) => <button key={c} className={category === c ? "on" : ""} onClick={() => setCategory(c)}>{c}<small>{c === ALL ? active.channels.length.toLocaleString("tr-TR") : counts.get(c)?.toLocaleString("tr-TR")}</small></button>)}</div><VirtualChannelGrid channels={channels} selected={selected} onSelect={(channel) => { setSelected(channel); setPanelOpen(false); }} /></> : <div className="empty-panel"><Tv size={34} /><strong>Yayın kütüphanen boş</strong><span>Bir M3U bağlantısı ekle; liste cihazında saklansın.</span><button className="primary" onClick={() => setLibraryOpen(true)}><Plus size={18} />Liste ekle</button></div>}
+        {!hydrated ? <div className="loading-panel"><Loader2 className="spin" size={24} /><span>Kütüphanen hazırlanıyor…</span></div> : active ? <><label className="search"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Binlerce kanal içinde ara" type="search" enterKeyHint="search" />{query && <button type="button" onClick={() => setQuery("")} aria-label="Aramayı temizle"><X size={16} /></button>}</label><div className="chips">{categories.map((c) => <button key={c} className={category === c ? "on" : ""} onClick={() => setCategory(c)}>{c}<small>{c === ALL ? active.channels.length.toLocaleString("tr-TR") : counts.get(c)?.toLocaleString("tr-TR")}</small></button>)}</div><VirtualChannelGrid channels={channels} selected={selected} onSelect={(channel) => { setSelected(channel); wake(); if (window.innerWidth <= 560) setPanelOpen(false); }} /></> : <div className="empty-panel"><Tv size={34} /><strong>Yayın kütüphanen boş</strong><span>Bir M3U bağlantısı ekle; liste cihazında saklansın.</span><button className="primary" onClick={() => setLibraryOpen(true)}><Plus size={18} />Liste ekle</button></div>}
       </aside>
       <nav className="dock" aria-label="Kontroller"><button className={`dock-main ${panelOpen ? "on" : ""}`} onClick={() => setPanelOpen((value) => !value)} aria-label="Kanallar"><LayoutGrid size={22} /><span>Kanallar</span></button>{selected && <div className="now"><strong>{selected.name}</strong><small>{selected.group || "Canlı"}</small></div>}<button className="dock-add" onClick={() => setLibraryOpen(true)} aria-label="Liste ekle"><Plus size={22} /></button></nav>
     </div>
