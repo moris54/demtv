@@ -4,6 +4,7 @@ import path from "node:path";
 import dns from "node:dns/promises";
 import net from "node:net";
 import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -50,7 +51,7 @@ const fetchUpstream = async (initialUrl) => {
         target = new URL(location, target);
         continue;
       }
-      return { response, resolvedUrl: target.toString() };
+      return { response, resolvedUrl: target.toString(), controller };
     } finally {
       clearTimeout(timer);
     }
@@ -76,7 +77,7 @@ async function handleProxy(req, res, requestUrl) {
   let targetUrl;
   try { targetUrl = new URL(target); await assertSafeTarget(targetUrl); } catch (error) { res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }); res.end(error instanceof Error ? error.message : "Invalid target URL"); return; }
   try {
-    const { response: upstream, resolvedUrl } = await fetchUpstream(targetUrl.toString());
+    const { response: upstream, resolvedUrl, controller } = await fetchUpstream(targetUrl.toString());
     const contentType = upstream.headers.get("content-type") || "application/octet-stream";
     res.statusCode = upstream.status;
     headers(res, contentType);
@@ -90,7 +91,16 @@ async function handleProxy(req, res, requestUrl) {
       return;
     }
     if (!upstream.body) { res.end(); return; }
-    Readable.fromWeb(upstream.body).pipe(res);
+    const source = Readable.fromWeb(upstream.body);
+    const abortUpstream = () => controller.abort();
+    req.once("aborted", abortUpstream);
+    res.once("close", abortUpstream);
+    try { await pipeline(source, res); } catch (error) {
+      if (!res.destroyed && !res.headersSent) { res.statusCode = 502; res.end(JSON.stringify({ error: "stream_failed" })); }
+    } finally {
+      req.off("aborted", abortUpstream);
+      res.off("close", abortUpstream);
+    }
   } catch (error) {
     if (!res.headersSent) { res.statusCode = 502; headers(res, "application/json; charset=utf-8"); res.end(JSON.stringify({ error: "upstream_unreachable", message: error instanceof Error ? error.message : "Proxy request failed" })); }
   }

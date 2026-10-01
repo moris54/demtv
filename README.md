@@ -9,27 +9,22 @@ pnpm install
 pnpm run dev
 ```
 
-Production build ve server:
+Production build ve servis:
 
 ```bash
 pnpm run build
-pnpm run start
+pnpm start
 ```
 
-Server varsayılan olarak `3000` portunda çalışır. `PORT` değişkeniyle farklı bir port verilebilir.
+## Veri ve trafik mimarisi
 
-## Özellikler
+- Playlist kayıtları ve ayrıştırılmış kanal verileri kullanıcının cihazındaki IndexedDB'de tutulur.
+- M3U playlist alınırken Render proxy güvenlik ve CORS katmanı olarak kullanılır.
+- Canlı yayın oynatımında tarayıcı önce kaynak URL'ye **doğrudan** bağlanır.
+- Kaynak CORS veya erişim nedeniyle doğrudan oynatılamazsa `/api/proxy` fallback olarak kullanılır.
+- Bu tercih, uyumlu yayınlarda canlı video trafiğini Render üzerinden geçirmeyerek outbound bant genişliğini azaltır.
+- Fallback proxy, istemci bağlantısı kapandığında upstream bağlantıyı da iptal eder; kopmuş yayınlar sunucuda açık kalmaz.
 
-- M3U/M3U8 playlist ekleme, yenileme ve silme
-- Kanal adı ve kategori filtresi
-- HLS ve native HLS oynatma
-- Playlist kayıtlarını cihazdaki IndexedDB alanında saklama
-- Büyük listelerde sanal kanal grid’i ile düşük DOM yükü
-- M3U/HLS kaynakları için aynı-origin proxy
-- `/health` sağlık endpoint’i
+## Render notları
 
-## Deployment
-
-Proje `Dockerfile` ile Node.js server olarak çalışır. GitHub repository’si kod deposudur; `/api/proxy` endpoint’i gerektiği için yalnızca GitHub Pages üzerinde yayınlanmamalıdır. Docker destekleyen bir Node.js hosting sağlayıcısı kullanılmalıdır.
-
-Proxy, loopback/private/link-local ağ hedeflerini, sınırsız redirect’leri ve uzun süren upstream isteklerini engeller. Playlist metni ve kanal kartlarının gösterimi tarayıcı cihazında gerçekleşir; yayın akışının proxy üzerinden geçmesi gereken kaynaklarda Render bant genişliği kullanılır. Public deployment öncesi hosting sağlayıcısında rate limit ve log izleme de etkinleştirilmelidir.
+Render üzerinde `/api/proxy` canlı akış için yalnızca fallback'tir. Çok sayıda yayın kaynağı CORS desteklemiyorsa trafik yine Render üzerinden geçer; bu durumda CDN veya ayrı bir stream gateway gerekir. Render loglarında tekrarlayan instance failure ve yüksek outbound bandwidth görülürse kaynakların doğrudan oynatılıp oynatılmadığı ve proxy fallback oranı kontrol edilmelidir.
