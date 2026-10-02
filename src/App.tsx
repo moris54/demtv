@@ -86,6 +86,7 @@ function App() {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
   const [awake, setAwake] = useState(true);
+  const [streamMode, setStreamMode] = useState<"direct" | "proxy">();
   const idleTimer = useRef<number>();
   const noticeTimer = useRef<number>();
 
@@ -129,13 +130,14 @@ function App() {
   const remove = (id: string) => { const rest = playlists.filter((p) => p.id !== id); setPlaylists(rest); if (activeId === id) { setActiveId(rest[0]?.id); setSelected(undefined); setCategory(ALL); } };
   const openList = (item: Playlist) => { setActiveId(item.id); setSelected(pickInitialChannel(item.channels)); setCategory(ALL); setQuery(""); setLibraryOpen(false); setPanelOpen(true); };
   const onPlayerError = useCallback((message: string) => show("error", message), []);
+  const onStreamMode = useCallback((mode: "direct" | "proxy") => setStreamMode(mode), []);
 
   return <div className={`app ${awake || panelOpen || libraryOpen ? "" : "asleep"}`}>
     <div className="stage" onPointerMove={wake} onPointerDown={wake}>
-      <main className="screen"><Player channel={selected} onError={onPlayerError} /></main>
+      <main className="screen"><Player channel={selected} onError={onPlayerError} onMode={onStreamMode} /></main>
       {panelOpen && <button className="scrim" aria-label="Kanal listesini kapat" onClick={() => setPanelOpen(false)} />}
       <aside className={`panel ${panelOpen ? "open" : ""}`} aria-label="Kanal listesi">
-        <header className="panel-head"><div className="panel-title"><div className="eyebrow">M3U STREAM PLAYER</div><h2>{active?.name ?? "Kanallar"}</h2><p>{active ? `${channels.length.toLocaleString("tr-TR")} / ${active.channels.length.toLocaleString("tr-TR")} kanal` : "Kişisel yayın kütüphanen"}</p></div><span className="status-pill"><i /> Cihazda</span><button className="icon-btn" onClick={() => setLibraryOpen(true)} aria-label="Listeleri yönet"><Library size={20} /></button><button className="icon-btn" onClick={() => setPanelOpen(false)} aria-label="Kapat"><X size={22} /></button></header>
+        <header className="panel-head"><div className="panel-title"><div className="eyebrow">M3U STREAM PLAYER</div><h2>{active?.name ?? "Kanallar"}</h2><p>{active ? `${channels.length.toLocaleString("tr-TR")} / ${active.channels.length.toLocaleString("tr-TR")} kanal` : "Kişisel yayın kütüphanen"}</p></div><span className={`status-pill ${streamMode === "proxy" ? "proxy" : ""}`}><i /> {streamMode === "proxy" ? "Proxy yedek" : streamMode === "direct" ? "Doğrudan" : "Cihazda"}</span><button className="icon-btn" onClick={() => setLibraryOpen(true)} aria-label="Listeleri yönet"><Library size={20} /></button><button className="icon-btn" onClick={() => setPanelOpen(false)} aria-label="Kapat"><X size={22} /></button></header>
         {!hydrated ? <div className="loading-panel"><Loader2 className="spin" size={24} /><span>Kütüphanen hazırlanıyor…</span></div> : active ? <><label className="search"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Binlerce kanal içinde ara" type="search" enterKeyHint="search" />{query && <button type="button" onClick={() => setQuery("")} aria-label="Aramayı temizle"><X size={16} /></button>}</label><div className="chips">{categories.map((c) => <button key={c} className={category === c ? "on" : ""} onClick={() => setCategory(c)}>{c}<small>{c === ALL ? active.channels.length.toLocaleString("tr-TR") : counts.get(c)?.toLocaleString("tr-TR")}</small></button>)}</div><VirtualChannelGrid channels={channels} selected={selected} onSelect={(channel) => { setSelected(channel); wake(); if (window.innerWidth <= 560) setPanelOpen(false); }} /></> : <div className="empty-panel"><Tv size={34} /><strong>Yayın kütüphanen boş</strong><span>Bir M3U bağlantısı ekle; liste cihazında saklansın.</span><button className="primary" onClick={() => setLibraryOpen(true)}><Plus size={18} />Liste ekle</button></div>}
       </aside>
       <nav className="dock" aria-label="Kontroller"><button className={`dock-main ${panelOpen ? "on" : ""}`} onClick={() => setPanelOpen((value) => !value)} aria-label="Kanallar"><LayoutGrid size={22} /><span>Kanallar</span></button>{selected && <div className="now"><strong>{selected.name}</strong><small>{selected.group || "Canlı"}</small></div>}<button className="dock-add" onClick={() => setLibraryOpen(true)} aria-label="Liste ekle"><Plus size={22} /></button></nav>

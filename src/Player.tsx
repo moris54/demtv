@@ -6,7 +6,7 @@ import { proxyUrl } from "./stream";
 
 const isHlsUrl = (url: string) => /(?:\.m3u8?|m3u)(?:$|[?#])/i.test(url);
 
-export function Player({ channel, onError }: { channel?: Channel; onError: (message: string) => void }) {
+export function Player({ channel, onError, onMode }: { channel?: Channel; onError: (message: string) => void; onMode?: (mode: "direct" | "proxy") => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
 
@@ -39,6 +39,7 @@ export function Player({ channel, onError }: { channel?: Channel; onError: (mess
     const start = async (proxy: boolean) => {
       if (cancelled) return;
       usingProxy = proxy;
+      onMode?.(proxy ? "proxy" : "direct");
       destroyHls();
       video.pause();
       video.removeAttribute("src");
@@ -97,7 +98,7 @@ export function Player({ channel, onError }: { channel?: Channel; onError: (mess
       video.removeAttribute("src");
       video.load();
     };
-  }, [channel, onError]);
+  }, [channel, onError, onMode]);
 
   const toggleFullscreen = () => { if (shellRef.current?.requestFullscreen) void shellRef.current.requestFullscreen(); };
   return <div ref={shellRef} className="player-shell"><video ref={videoRef} controls playsInline poster={channel?.logo} onDoubleClick={toggleFullscreen} /><button className="player-fullscreen-button" onClick={toggleFullscreen} title="Tam ekran" aria-label="Tam ekran"><Maximize2 size={18}/></button>{!channel && <div className="empty-player"><span>▶</span><strong>Bir kanal seç</strong><small>Yayını burada izlemeye başla</small></div>}</div>;

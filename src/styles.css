@@ -49,6 +49,7 @@ button{cursor:pointer}
 .panel-title h2{margin:0;font:600 20px 'Space Grotesk';letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .panel-title p{margin:3px 0 0;font-size:13px;color:var(--muted)}
 .status-pill{flex:none;display:flex;align-items:center;gap:5px;padding:6px 8px;border:1px solid rgba(126,231,199,.2);border-radius:99px;color:var(--ok);font-size:11px;font-weight:600}.status-pill i{width:6px;height:6px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px rgba(126,231,199,.12)}
+.status-pill.proxy{border-color:rgba(255,190,92,.3);color:#ffbe5c}.status-pill.proxy i{background:#ffbe5c;box-shadow:0 0 0 3px rgba(255,190,92,.12)}
 .icon-btn{flex:none;width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:var(--r-sm);background:transparent;color:var(--muted)}
 .icon-btn:hover:not(:disabled){background:var(--card-hi);color:var(--text)}
 .icon-btn.sm{width:40px;height:40px;background:var(--card-hi)}
