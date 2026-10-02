@@ -47,9 +47,9 @@ function VirtualChannelGrid({ channels, selected, onSelect }: { channels: Channe
     return () => observer.disconnect();
   }, []);
   const compact = metrics.width > 0 && metrics.width < 560;
-  const minCard = compact ? 150 : 112;
-  const gap = compact ? 10 : 10;
-  const rowHeight = compact ? 188 : 154;
+  const minCard = compact ? 96 : 112;
+  const gap = compact ? 7 : 10;
+  const rowHeight = compact ? 145 : 154;
   const columns = Math.max(1, Math.floor((Math.max(metrics.width - 26, minCard) + gap) / (minCard + gap)));
   const rows = Math.ceil(channels.length / columns);
   const start = Math.max(0, Math.floor(metrics.scrollTop / rowHeight) - 3);
