@@ -142,3 +142,11 @@ button{cursor:pointer}
 }
 @media(max-height:480px){.panel-head{padding-top:8px}.search{margin-bottom:8px;height:42px}.chips{padding-bottom:8px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* Visible settings label on the dynamic island */
+.dock-settings{width:auto;padding:0 10px;display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700}
+.dock-settings span{display:inline}
+
+.settings-card{position:absolute;z-index:25;left:50%;bottom:calc(82px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(360px,calc(100% - 24px));padding:16px;border:1px solid rgba(220,235,245,.2);border-radius:18px;background:rgba(8,16,22,.9);backdrop-filter:blur(24px) saturate(1.2);box-shadow:0 18px 50px rgba(0,0,0,.5)}
+.settings-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}.settings-head strong{display:block;font:600 20px 'Space Grotesk'}.settings-close{width:36px;height:36px;display:grid;place-items:center;border:0;border-radius:10px;background:rgba(255,255,255,.06);color:var(--muted)}
+.setting-row{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid rgba(220,235,245,.12);border-radius:13px;background:rgba(24,38,48,.65);text-align:left;color:var(--text)}.setting-row span{display:grid;grid-template-columns:22px 1fr;align-items:center;column-gap:8px}.setting-row span svg{grid-row:span 2;color:var(--ok)}.setting-row b{font-size:13px}.setting-row small{grid-column:2;color:var(--muted);font-size:10px;margin-top:3px}.switch{font-style:normal;color:var(--muted);font-size:11px}.switch.on{color:var(--ok)}.setting-label{margin:15px 2px 7px;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}.setting-options{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.setting-options button{height:42px;border:1px solid rgba(220,235,245,.12);border-radius:10px;background:rgba(255,255,255,.04);color:#bcc8cf;font-size:11px}.setting-options button.selected{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
