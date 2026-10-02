@@ -20,9 +20,13 @@ button{cursor:pointer}
 /* Player */
 .player-shell{position:relative;width:100%;height:100%;background:#000}
 .player-shell video{width:100%;height:100%;display:block;object-fit:contain;background:#000}
-.player-fullscreen-button{position:absolute;right:18px;bottom:18px;z-index:3;width:48px;height:48px;border:1px solid var(--line);border-radius:var(--r-md);background:rgba(10,15,20,.6);backdrop-filter:blur(12px);color:var(--text);display:grid;place-items:center;transition:opacity .25s,background .15s}
-.player-fullscreen-button:hover{background:var(--accent);color:var(--accent-ink)}
-.asleep .player-fullscreen-button{opacity:0;pointer-events:none}
+.player-shell video.fill{object-fit:cover}
+.player-shell:fullscreen{width:100vw;height:100vh;background:#000}
+.player-shell:-webkit-full-screen{width:100vw;height:100vh;background:#000}
+.player-actions{position:absolute;right:18px;bottom:18px;z-index:3;display:flex;align-items:center;gap:8px;transition:opacity .25s,transform .25s}
+.player-control{min-width:48px;height:48px;padding:0 13px;display:flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--line);border-radius:var(--r-md);background:rgba(10,15,20,.72);backdrop-filter:blur(12px);color:var(--text);font-size:12px;font-weight:600}
+.player-control:hover,.player-control.active{background:var(--accent);color:var(--accent-ink)}
+.asleep .player-actions{opacity:0;pointer-events:none;transform:translateY(8px)}
 .empty-player{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;background:radial-gradient(circle at 50% 40%,#14202b,#070b0f 65%)}
 .empty-player span{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);font-size:22px;padding-left:4px;margin-bottom:10px}
 .empty-player strong{font:600 20px 'Space Grotesk'}
@@ -115,7 +119,7 @@ button{cursor:pointer}
 @media(max-width:560px){
   .dock{left:12px;bottom:12px;max-width:calc(100% - 80px)}.dock-main{padding:0 14px 0 12px;height:48px}.dock-add{width:48px;height:48px}
   .now{max-width:34vw}.panel{width:100%;border-right:0}.virtual-row{right:0}.card{height:136px}.logo{padding:9px}
-  .logo{padding:9px}.modal{padding:18px}.player-fullscreen-button{right:12px;bottom:12px}
+  .logo{padding:9px}.modal{padding:18px}.player-actions{right:12px;bottom:12px}.player-control{height:48px}.player-control span{display:none}
 }
 @media(pointer:coarse){
   .icon-btn{width:52px;height:52px}.icon-btn.sm{width:48px;height:48px}.search{height:54px}.search button{width:42px;height:42px}.chips button{height:46px;padding-inline:16px}.dock-main,.dock-add{height:56px}.dock-add{width:56px}.card{height:148px;padding:10px}.primary{height:54px}.list-main{min-height:52px}

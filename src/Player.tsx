@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { Maximize2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Maximize2, Minimize2, Move } from "lucide-react";
 import type Hls from "hls.js";
 import type { Channel } from "./m3u";
 import { proxyUrl } from "./stream";
@@ -9,6 +9,14 @@ const isHlsUrl = (url: string) => /(?:\.m3u8?|m3u)(?:$|[?#])/i.test(url);
 export function Player({ channel, onError, onMode }: { channel?: Channel; onError: (message: string) => void; onMode?: (mode: "direct" | "proxy") => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fit, setFit] = useState<"contain" | "cover">("contain");
+
+  useEffect(() => {
+    const syncFullscreen = () => setIsFullscreen(document.fullscreenElement === shellRef.current);
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    return () => document.removeEventListener("fullscreenchange", syncFullscreen);
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -100,6 +108,15 @@ export function Player({ channel, onError, onMode }: { channel?: Channel; onErro
     };
   }, [channel, onError, onMode]);
 
-  const toggleFullscreen = () => { if (shellRef.current?.requestFullscreen) void shellRef.current.requestFullscreen(); };
-  return <div ref={shellRef} className="player-shell"><video ref={videoRef} controls playsInline poster={channel?.logo} onDoubleClick={toggleFullscreen} /><button className="player-fullscreen-button" onClick={toggleFullscreen} title="Tam ekran" aria-label="Tam ekran"><Maximize2 size={18}/></button>{!channel && <div className="empty-player"><span>▶</span><strong>Bir kanal seç</strong><small>Yayını burada izlemeye başla</small></div>}</div>;
+  const toggleFullscreen = () => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    if (document.fullscreenElement === shell) {
+      void document.exitFullscreen();
+      return;
+    }
+    if (shell.requestFullscreen) void shell.requestFullscreen().catch(() => undefined);
+  };
+  const toggleFit = () => setFit((value) => value === "contain" ? "cover" : "contain");
+  return <div ref={shellRef} className="player-shell"><video ref={videoRef} className={fit === "cover" ? "fill" : ""} controls playsInline poster={channel?.logo} onDoubleClick={toggleFullscreen} /><div className="player-actions"><button className={`player-control ${fit === "cover" ? "active" : ""}`} onClick={toggleFit} title={fit === "cover" ? "Orijinal oran" : "Ekranı doldur"} aria-label={fit === "cover" ? "Orijinal oran" : "Ekranı doldur"} aria-pressed={fit === "cover"}><Move size={18}/><span>{fit === "cover" ? "Orijinal" : "Doldur"}</span></button><button className="player-control" onClick={toggleFullscreen} title={isFullscreen ? "Tam ekrandan çık" : "Tam ekran"} aria-label={isFullscreen ? "Tam ekrandan çık" : "Tam ekran"}>{isFullscreen ? <Minimize2 size={18}/> : <Maximize2 size={18}/>}</button></div>{!channel && <div className="empty-player"><span>▶</span><strong>Bir kanal seç</strong><small>Yayını burada izlemeye başla</small></div>}</div>;
 }
