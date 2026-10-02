@@ -5,7 +5,7 @@ import { proxyUrl } from "./stream";
 
 const isHlsUrl = (url: string) => /(?:\.m3u8?|m3u)(?:$|[?#])/i.test(url);
 
-export function Player({ channel, onError, onMode, fit, command, onPlayingChange }: { channel?: Channel; onError: (message: string) => void; onMode?: (mode: "direct" | "proxy") => void; fit: "contain" | "cover"; command: number; onPlayingChange?: (playing: boolean) => void }) {
+export function Player({ channel, onError, onMode, fit, command, onPlayingChange, onUnavailable }: { channel?: Channel; onError: (message: string) => void; onMode?: (mode: "direct" | "proxy") => void; fit: "contain" | "cover"; command: number; onPlayingChange?: (playing: boolean) => void; onUnavailable?: (channel: Channel) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   useEffect(() => { const video = videoRef.current; if (!video) return; const sync = () => onPlayingChange?.(!video.paused); video.addEventListener("play", sync); video.addEventListener("pause", sync); return () => { video.removeEventListener("play", sync); video.removeEventListener("pause", sync); }; }, [onPlayingChange]);
@@ -20,13 +20,14 @@ export function Player({ channel, onError, onMode, fit, command, onPlayingChange
     let fallbackStarted = false;
     let retryCount = 0;
     let retryTimer: number | undefined;
+    let candidateIndex = 0;
+    const candidates = [channel.url, ...(channel.alternatives || [])];
 
-    const directUrl = channel.url;
-    const fallbackUrl = proxyUrl(channel.url);
-    const sourceUrl = () => usingProxy ? fallbackUrl : directUrl;
+    const sourceUrl = () => usingProxy ? proxyUrl(candidates[candidateIndex]) : candidates[candidateIndex];
     const fail = () => {
       if (cancelled) return;
       if (!usingProxy && !fallbackStarted) {
+        if (candidateIndex < candidates.length - 1) { candidateIndex += 1; start(false); return; }
         fallbackStarted = true;
         start(true);
         return;
@@ -41,6 +42,7 @@ export function Player({ channel, onError, onMode, fit, command, onPlayingChange
     const retryOrFail = (message: string) => {
       if (cancelled) return;
       if (retryCount < 2) { retryCount += 1; retryTimer = window.setTimeout(() => start(usingProxy), retryCount === 1 ? 2500 : 7000); return; }
+      onUnavailable?.(channel);
       onError(message);
     };
 
@@ -53,10 +55,12 @@ export function Player({ channel, onError, onMode, fit, command, onPlayingChange
       video.removeAttribute("src");
       video.load();
       const currentUrl = sourceUrl();
-      const hintedHls = isHlsUrl(channel.url);
+      const hintedHls = isHlsUrl(currentUrl);
 
-      if (/profile=htsp|^htsp:/i.test(channel.url)) {
-        onError("Bu kanal HTSP protokolü kullanıyor; tarayıcı oynatımı için aynı kanalın .m3u8 alternatifini seçin.");
+      if (/profile=htsp|^htsp:/i.test(currentUrl)) {
+        if (candidateIndex < candidates.length - 1) { candidateIndex += 1; start(false); return; }
+        onUnavailable?.(channel);
+        onError("Bu kanalın tarayıcı uyumlu bir yayın adresi bulunamadı.");
         return;
       }
 
@@ -81,6 +85,7 @@ export function Player({ channel, onError, onMode, fit, command, onPlayingChange
         hls.on(HlsPlayer.Events.ERROR, (_event, data) => {
           if (!data.fatal || cancelled) return;
           if (!usingProxy && !fallbackStarted) {
+            if (candidateIndex < candidates.length - 1) { candidateIndex += 1; start(false); return; }
             fallbackStarted = true;
             start(true);
           } else {

@@ -5,6 +5,7 @@ export type Channel = {
   logo?: string;
   group?: string;
   tvgId?: string;
+  alternatives?: string[];
 };
 
 const attribute = (line: string, key: string) => {
@@ -26,7 +27,8 @@ const makeChannel = (info: string | undefined, url: string, baseUrl?: string, fa
   const logo = attribute(info || "", "tvg-logo") || attribute(info || "", "logo");
   const group = attribute(info || "", "group-title") || attribute(info || "", "group") || "Diğer";
   const tvgId = attribute(info || "", "tvg-id");
-  return { id: `${tvgId || name}-${resolved}`, name, url: resolved, logo, group, tvgId };
+  const alternatives = Array.from((info || "").matchAll(/(?:Yedek\d*|backup\d*)\s*=\s*"([^"]+)"/gi)).map((match) => resolveUrl(match[1], baseUrl)).filter((value): value is string => Boolean(value && /^https?:\/\//i.test(value)) && value !== resolved);
+  return { id: `${tvgId || name}-${resolved}`, name, url: resolved, logo, group, tvgId, alternatives: alternatives.length ? alternatives : undefined };
 };
 
 export function parseM3U(text: string, baseUrl?: string): Channel[] {
