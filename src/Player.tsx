@@ -25,6 +25,8 @@ export function Player({ channel, onError, onMode }: { channel?: Channel; onErro
     let cancelled = false;
     let usingProxy = false;
     let fallbackStarted = false;
+    let retryCount = 0;
+    let retryTimer: number | undefined;
 
     const directUrl = channel.url;
     const fallbackUrl = proxyUrl(channel.url);
@@ -36,12 +38,17 @@ export function Player({ channel, onError, onMode }: { channel?: Channel; onErro
         start(true);
         return;
       }
-      onError("Yayın başlatılamadı. Kaynak kapalı olabilir, CORS engeli veya tarayıcı uyumsuzluğu olabilir.");
+      retryOrFail("Yayın başlatılamadı. Kaynak kapalı olabilir, CORS engeli veya tarayıcı uyumsuzluğu olabilir.");
     };
 
     const destroyHls = () => {
       hls?.destroy();
       hls = undefined;
+    };
+    const retryOrFail = (message: string) => {
+      if (cancelled) return;
+      if (retryCount < 2) { retryCount += 1; retryTimer = window.setTimeout(() => start(usingProxy), retryCount === 1 ? 2500 : 7000); return; }
+      onError(message);
     };
 
     const start = async (proxy: boolean) => {
@@ -84,7 +91,7 @@ export function Player({ channel, onError, onMode }: { channel?: Channel; onErro
             fallbackStarted = true;
             start(true);
           } else {
-            onError(`HLS oynatma hatası: ${data.details || "kaynak yanıt vermedi"}.`);
+            retryOrFail(`HLS oynatma hatası: ${data.details || "kaynak yanıt vermedi"}.`);
           }
         });
         return;
@@ -100,6 +107,7 @@ export function Player({ channel, onError, onMode }: { channel?: Channel; onErro
     void start(false);
     return () => {
       cancelled = true;
+      window.clearTimeout(retryTimer);
       video.removeEventListener("error", fail);
       destroyHls();
       video.pause();

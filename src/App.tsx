@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, Check, LayoutGrid, Library, Link2, Loader2, Plus, RefreshCw, Search, Tv, X } from "lucide-react";
+import { AlertCircle, Check, Download, EyeOff, Heart, History, LayoutGrid, Library, Link2, Loader2, Plus, RefreshCw, Search, Settings2, Star, Tv, Upload, X } from "lucide-react";
 import { parseM3U, type Channel } from "./m3u";
 import { Player } from "./Player";
 import { proxyUrl } from "./stream";
-import { loadPlaylists, savePlaylists } from "./storage";
+import { loadPlaylists, loadPrefs, savePlaylists, savePrefs, type UserPrefs } from "./storage";
 
 type Playlist = { id: string; name: string; url: string; channels: Channel[]; updatedAt: string };
 const ALL = "Tümü";
+const DEFAULT_URL = "https://onureroz.com/indirmeler/turk/index.m3u";
 
 const repairChannelUrl = (channel: Channel): Channel => {
   try {
@@ -24,15 +25,15 @@ function Logo({ channel }: { channel: Channel }) {
   return <span className="logo">{channel.logo && !failed ? <img src={channel.logo} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} /> : initials ? <b>{initials}</b> : <Tv size={26} />}</span>;
 }
 
-const ChannelCard = ({ channel, selected, onSelect }: { channel: Channel; selected: boolean; onSelect: (channel: Channel) => void }) => (
-  <button className={`card ${selected ? "on" : ""}`} onClick={() => onSelect(channel)} title={channel.name}>
+const ChannelCard = ({ channel, selected, favorite, onSelect, onFavorite }: { channel: Channel; selected: boolean; favorite: boolean; onSelect: (channel: Channel) => void; onFavorite: (channel: Channel) => void }) => (
+  <div className={`card-wrap ${selected ? "on" : ""}`}><button className={`card ${selected ? "on" : ""}`} onClick={() => onSelect(channel)} title={channel.name}>
     <Logo channel={channel} />
     <span className="name">{channel.name}</span>
     <small className="card-group">{channel.group || "Canlı"}</small>
-  </button>
+  </button><button className={`card-favorite ${favorite ? "on" : ""}`} onClick={(event) => { event.stopPropagation(); onFavorite(channel); }} aria-label={favorite ? "Favoriden çıkar" : "Favoriye ekle"}><Star size={15} fill={favorite ? "currentColor" : "none"} /></button></div>
 );
 
-function VirtualChannelGrid({ channels, selected, onSelect }: { channels: Channel[]; selected?: Channel; onSelect: (channel: Channel) => void }) {
+function VirtualChannelGrid({ channels, selected, favorites, onSelect, onFavorite }: { channels: Channel[]; selected?: Channel; favorites: Set<string>; onSelect: (channel: Channel) => void; onFavorite: (channel: Channel) => void }) {
   const gridRef = useRef<HTMLDivElement>(null);
   const touchScroll = useRef<{ y: number; top: number } | null>(null);
   const suppressClick = useRef(false);
@@ -65,7 +66,7 @@ function VirtualChannelGrid({ channels, selected, onSelect }: { channels: Channe
         const row = start + offset;
         const first = row * columns;
         return <div className="virtual-row" key={row} style={{ top: row * rowHeight, gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, gap }}>
-          {channels.slice(first, first + columns).map((channel) => <ChannelCard key={channel.id} channel={channel} selected={selected?.id === channel.id} onSelect={handleSelect} />)}
+          {channels.slice(first, first + columns).map((channel) => <ChannelCard key={channel.id} channel={channel} selected={selected?.id === channel.id} favorite={favorites.has(channel.id)} onSelect={handleSelect} onFavorite={onFavorite} />)}
         </div>;
       })}
     </div>}
@@ -87,15 +88,34 @@ function App() {
   const [panelOpen, setPanelOpen] = useState(true);
   const [awake, setAwake] = useState(true);
   const [streamMode, setStreamMode] = useState<"direct" | "proxy">();
+  const [prefs, setPrefs] = useState<UserPrefs>({ favorites: [], recent: [], hidden: [], carMode: true, sort: "default" });
+  const [quickView, setQuickView] = useState<"all" | "favorites" | "recent">("all");
   const idleTimer = useRef<number>();
   const noticeTimer = useRef<number>();
+  const importRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let alive = true;
-    loadPlaylists<Playlist>().then((saved) => { if (!alive) return; const repaired = saved.map(repairPlaylist); setPlaylists(repaired); setActiveId(repaired[0]?.id); setSelected(pickInitialChannel(repaired[0]?.channels || [])); setPanelOpen(true); setHydrated(true); });
+    (async () => {
+      const [saved, savedPrefs] = await Promise.all([loadPlaylists<Playlist>(), loadPrefs()]);
+      if (!alive) return;
+      setPrefs(savedPrefs);
+      let repaired = saved.map(repairPlaylist);
+      if (!repaired.length) {
+        try {
+          const response = await fetch(proxyUrl(DEFAULT_URL));
+          if (response.ok) {
+            const channels = parseM3U(await response.text(), DEFAULT_URL);
+            repaired = [{ id: "default-turk", name: "Türk Kanalları", url: DEFAULT_URL, channels, updatedAt: new Date().toISOString() }];
+          }
+        } catch { /* varsayılan liste başarısızsa kullanıcı yine manuel ekleyebilir */ }
+      }
+      setPlaylists(repaired); setActiveId(repaired[0]?.id); setSelected(pickInitialChannel(repaired[0]?.channels || [])); setPanelOpen(true); setHydrated(true);
+    })();
     return () => { alive = false; };
   }, []);
   useEffect(() => { if (hydrated) void savePlaylists(playlists); }, [hydrated, playlists]);
+  useEffect(() => { if (hydrated) void savePrefs(prefs); }, [hydrated, prefs]);
   useEffect(() => { if (!activeId && playlists[0]) setActiveId(playlists[0].id); }, [activeId, playlists]);
   const wake = useCallback(() => { setAwake(true); window.clearTimeout(idleTimer.current); idleTimer.current = window.setTimeout(() => setAwake(false), 4000); }, []);
   useEffect(() => { wake(); return () => window.clearTimeout(idleTimer.current); }, [wake]);
@@ -104,7 +124,14 @@ function App() {
   const active = playlists.find((p) => p.id === activeId) || playlists[0];
   const counts = useMemo(() => { const map = new Map<string, number>(); (active?.channels || []).forEach((c) => map.set(c.group || "Diğer", (map.get(c.group || "Diğer") || 0) + 1)); return map; }, [active]);
   const categories = useMemo(() => [ALL, ...Array.from(counts.keys()).sort((a, b) => a.localeCompare(b, "tr"))], [counts]);
-  const channels = useMemo(() => { const q = tr(query.trim()); return (active?.channels || []).filter((c) => (category === ALL || c.group === category) && (!q || tr(c.name).includes(q))); }, [active, category, query]);
+  const favorites = useMemo(() => new Set(prefs.favorites), [prefs.favorites]);
+  const channels = useMemo(() => {
+    const q = tr(query.trim()); const hidden = new Set(prefs.hidden); const recent = new Set(prefs.recent);
+    const filtered = (active?.channels || []).filter((c) => !hidden.has(c.id) && (category === ALL || c.group === category) && (quickView === "all" || (quickView === "favorites" ? favorites.has(c.id) : recent.has(c.id))) && (!q || tr(`${c.name} ${c.group || ""}`).includes(q)));
+    if (prefs.sort === "name") return [...filtered].sort((a, b) => a.name.localeCompare(b.name, "tr"));
+    if (prefs.sort === "recent") return [...filtered].sort((a, b) => (prefs.recent.indexOf(a.id) - prefs.recent.indexOf(b.id)));
+    return filtered;
+  }, [active, category, favorites, prefs.hidden, prefs.recent, prefs.sort, query, quickView]);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (libraryOpen || !channels.length || !["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft"].includes(event.key)) return;
@@ -131,17 +158,22 @@ function App() {
   const openList = (item: Playlist) => { setActiveId(item.id); setSelected(pickInitialChannel(item.channels)); setCategory(ALL); setQuery(""); setLibraryOpen(false); setPanelOpen(true); };
   const onPlayerError = useCallback((message: string) => show("error", message), []);
   const onStreamMode = useCallback((mode: "direct" | "proxy") => setStreamMode(mode), []);
+  const selectChannel = (channel: Channel) => { setSelected(channel); setPrefs((current) => ({ ...current, recent: [channel.id, ...current.recent.filter((id) => id !== channel.id)].slice(0, 20) })); wake(); };
+  const toggleFavorite = (channel: Channel) => setPrefs((current) => ({ ...current, favorites: current.favorites.includes(channel.id) ? current.favorites.filter((id) => id !== channel.id) : [channel.id, ...current.favorites] }));
+  const exportData = () => { const blob = new Blob([JSON.stringify({ playlists, prefs }, null, 2)], { type: "application/json" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "m3u-stream-yedek.json"; link.click(); URL.revokeObjectURL(link.href); show("success", "Listeleriniz cihazınıza aktarıldı."); };
+  const importData = async (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; event.target.value = ""; if (!file) return; try { const data = JSON.parse(await file.text()); if (!Array.isArray(data.playlists)) throw new Error(); setPlaylists(data.playlists.map(repairPlaylist)); if (data.prefs) setPrefs((current) => ({ ...current, ...data.prefs })); show("success", "Yedek geri yüklendi."); } catch { show("error", "Geçerli bir M3U Stream yedek dosyası seçin."); } };
 
-  return <div className={`app ${awake || panelOpen || libraryOpen ? "" : "asleep"}`}>
+  return <div className={`app ${prefs.carMode ? "car-mode" : ""} ${awake || panelOpen || libraryOpen ? "" : "asleep"}`}>
     <div className="stage" onPointerMove={wake} onPointerDown={wake}>
       <main className="screen"><Player channel={selected} onError={onPlayerError} onMode={onStreamMode} /></main>
       {panelOpen && <button className="scrim" aria-label="Kanal listesini kapat" onClick={() => setPanelOpen(false)} />}
       <aside className={`panel ${panelOpen ? "open" : ""}`} aria-label="Kanal listesi">
-        <header className="panel-head"><div className="panel-title"><div className="eyebrow">M3U STREAM PLAYER</div><h2>{active?.name ?? "Kanallar"}</h2><p>{active ? `${channels.length.toLocaleString("tr-TR")} / ${active.channels.length.toLocaleString("tr-TR")} kanal` : "Kişisel yayın kütüphanen"}</p></div><span className={`status-pill ${streamMode === "proxy" ? "proxy" : ""}`}><i /> {streamMode === "proxy" ? "Proxy yedek" : streamMode === "direct" ? "Doğrudan" : "Cihazda"}</span><button className="icon-btn" onClick={() => setLibraryOpen(true)} aria-label="Listeleri yönet"><Library size={20} /></button><button className="icon-btn" onClick={() => setPanelOpen(false)} aria-label="Kapat"><X size={22} /></button></header>
-        {!hydrated ? <div className="loading-panel"><Loader2 className="spin" size={24} /><span>Kütüphanen hazırlanıyor…</span></div> : active ? <><label className="search"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Kanal ara · dokun ve oynat" type="search" enterKeyHint="search" />{query && <button type="button" onClick={() => setQuery("")} aria-label="Aramayı temizle"><X size={16} /></button>}</label><div className="chips">{categories.map((c) => <button key={c} className={category === c ? "on" : ""} onClick={() => setCategory(c)}>{c}<small>{c === ALL ? active.channels.length.toLocaleString("tr-TR") : counts.get(c)?.toLocaleString("tr-TR")}</small></button>)}</div><VirtualChannelGrid channels={channels} selected={selected} onSelect={(channel) => { setSelected(channel); wake(); }} /></> : <div className="empty-panel"><Tv size={34} /><strong>Yayın kütüphanen boş</strong><span>Bir M3U bağlantısı ekle; liste cihazında saklansın.</span><button className="primary" onClick={() => setLibraryOpen(true)}><Plus size={18} />Liste ekle</button></div>}
+        <header className="panel-head"><div className="panel-title"><div className="eyebrow">M3U STREAM PLAYER · ARAÇ MODU</div><h2>{active?.name ?? "Kanallar"}</h2><p>{active ? `${channels.length.toLocaleString("tr-TR")} kanal hazır` : "Kişisel yayın kütüphanen"}</p></div><span className={`status-pill ${streamMode === "proxy" ? "proxy" : ""}`}><i /> {streamMode === "proxy" ? "Proxy yedek" : streamMode === "direct" ? "Doğrudan" : "Cihazda"}</span><button className="icon-btn" onClick={() => setLibraryOpen(true)} aria-label="Listeleri yönet"><Library size={20} /></button><button className="icon-btn" onClick={() => setPanelOpen(false)} aria-label="Kapat"><X size={22} /></button></header>
+        {!hydrated ? <div className="loading-panel"><Loader2 className="spin" size={24} /><span>Kütüphanen hazırlanıyor…</span></div> : active ? <><label className="search"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Kanal ara · dokun ve oynat" type="search" enterKeyHint="search" />{query && <button type="button" onClick={() => setQuery("")} aria-label="Aramayı temizle"><X size={16} /></button>}</label><div className="quickbar"><button className={quickView === "all" ? "active" : ""} onClick={() => setQuickView("all")}><LayoutGrid size={16} />Tümü</button><button className={quickView === "favorites" ? "active" : ""} onClick={() => setQuickView("favorites")}><Heart size={16} />Favoriler <small>{favorites.size}</small></button><button className={quickView === "recent" ? "active" : ""} onClick={() => setQuickView("recent")}><History size={16} />Son izlenen</button></div><div className="chips">{categories.map((c) => <button key={c} className={category === c ? "on" : ""} onClick={() => { setCategory(c); setQuickView("all"); }}>{c}<small>{c === ALL ? active.channels.length.toLocaleString("tr-TR") : counts.get(c)?.toLocaleString("tr-TR")}</small></button>)}</div><VirtualChannelGrid channels={channels} selected={selected} favorites={favorites} onSelect={selectChannel} onFavorite={toggleFavorite} /></> : <div className="empty-panel"><Tv size={34} /><strong>Yayın kütüphanen boş</strong><span>Bir M3U bağlantısı ekle; liste cihazında saklansın.</span><button className="primary" onClick={() => setLibraryOpen(true)}><Plus size={18} />Liste ekle</button></div>}
       </aside>
-      <nav className="dock" aria-label="Kontroller"><button className={`dock-main ${panelOpen ? "on" : ""}`} onClick={() => setPanelOpen((value) => !value)} aria-label="Kanallar"><LayoutGrid size={22} /><span>Kanallar</span></button>{selected && <div className="now"><strong>{selected.name}</strong><small>{selected.group || "Canlı"}</small></div>}<button className="dock-add" onClick={() => setLibraryOpen(true)} aria-label="Liste ekle"><Plus size={22} /></button></nav>
+      <nav className="dock" aria-label="Kontroller"><button className={`dock-main ${panelOpen ? "on" : ""}`} onClick={() => setPanelOpen((value) => !value)} aria-label="Kanallar"><LayoutGrid size={22} /><span>Kanallar</span></button>{selected && <div className="now"><strong>{selected.name}</strong><small>{selected.group || "Canlı"}</small></div>}<button className="dock-add" onClick={() => setPrefs((current) => ({ ...current, carMode: !current.carMode }))} aria-label="Araç modunu değiştir"><Settings2 size={20} /></button><button className="dock-add" onClick={exportData} aria-label="Yedek dışa aktar"><Download size={20} /></button><button className="dock-add" onClick={() => importRef.current?.click()} aria-label="Yedek içe aktar"><Upload size={20} /></button><button className="dock-add" onClick={() => setLibraryOpen(true)} aria-label="Liste ekle"><Plus size={22} /></button></nav>
     </div>
+    <input ref={importRef} type="file" accept="application/json" hidden onChange={importData} />
     {notice && <div className={`toast ${notice.type}`} role="status">{notice.type === "success" ? <Check size={18} /> : <AlertCircle size={18} />}<span>{notice.text}</span><button onClick={() => setNotice(undefined)} aria-label="Kapat"><X size={16} /></button></div>}
     {libraryOpen && <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setLibraryOpen(false); }}><div className="modal" role="dialog" aria-modal="true" aria-label="Listeleri yönet"><header className="modal-head"><div><div className="eyebrow">KÜTÜPHANE</div><h2>Listelerim</h2><p>Listeler ve kanallar yalnızca bu cihazda saklanır.</p></div><button className="icon-btn" onClick={() => setLibraryOpen(false)} aria-label="Kapat"><X size={22} /></button></header>{playlists.length > 0 && <div className="lists">{playlists.map((item) => <div className={`list ${active?.id === item.id ? "on" : ""}`} key={item.id}><button className="list-main" onClick={() => openList(item)}><span className="list-icon"><Tv size={20} /></span><span className="list-copy"><strong>{item.name}</strong><small>{item.url}</small></span><em>{item.channels.length.toLocaleString("tr-TR")} kanal</em></button><button className="icon-btn sm" title="Yenile" aria-label="Listeyi yenile" onClick={() => refresh(item)} disabled={loading}><RefreshCw size={17} className={loading ? "spin" : ""} /></button><button className="icon-btn sm danger" title="Sil" aria-label="Listeyi sil" onClick={() => remove(item.id)}><X size={17} /></button></div>)}</div>}<div className="add"><h3>Yeni liste ekle</h3><input value={name} onChange={(event) => setName(event.target.value)} placeholder="Liste adı (isteğe bağlı)" /><div className="url"><Link2 size={17} /><input autoFocus value={url} onChange={(event) => setUrl(event.target.value)} onKeyDown={(event) => event.key === "Enter" && addPlaylist()} placeholder="https://ornek.com/liste.m3u" inputMode="url" /></div><button className="primary" onClick={addPlaylist} disabled={loading}>{loading ? <Loader2 className="spin" size={18} /> : <Plus size={18} />}Ekle</button><small className="device-note">Büyük listeler cihazındaki IndexedDB alanında tutulur; Render yalnızca listeyi almak için kullanılır.</small></div></div></div>}
   </div>;
