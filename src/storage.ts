@@ -12,6 +12,7 @@ export type UserPrefs = {
   hidden: string[];
   carMode: boolean;
   sort: "default" | "name" | "recent";
+  theme: "current" | "midnight" | "glass" | "ember";
 };
 
 const DB_NAME = "m3u-stream-player";
@@ -19,7 +20,7 @@ const PLAYLIST_STORE = "playlists";
 const PREFS_STORE = "preferences";
 const PREFS_ID = "user";
 const LEGACY_KEY = "m3u-stream-playlists";
-const DEFAULT_PREFS: UserPrefs = { favorites: [], recent: [], hidden: [], carMode: true, sort: "default" };
+const DEFAULT_PREFS: UserPrefs = { favorites: [], recent: [], hidden: [], carMode: true, sort: "default", theme: "current" };
 
 const openDb = () => new Promise<IDBDatabase>((resolve, reject) => {
   const request = indexedDB.open(DB_NAME, 2);
