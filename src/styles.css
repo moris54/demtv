@@ -172,3 +172,7 @@ button{cursor:pointer}
 /* Larger central play/stop control for touch use */
 .dock-play{width:62px;height:62px;flex:none}.dock-play svg{width:25px;height:25px}
 @media(max-width:560px){.dock-play{width:58px;height:58px}.dock-play svg{width:24px;height:24px}}
+
+/* Compact glass dynamic island with an oversized floating play control */
+.dock{gap:3px;padding:4px 6px;overflow:visible;border-radius:18px;background:rgba(8,15,21,.4);border-color:rgba(220,235,245,.22);backdrop-filter:blur(26px) saturate(1.35);box-shadow:0 12px 30px rgba(0,0,0,.32),inset 0 1px rgba(255,255,255,.1)}.dock-channel,.dock-skip,.dock-fit,.dock-settings{height:42px}.dock-channel{min-width:62px;padding:0 9px}.dock-skip{width:38px}.dock-play{position:relative;z-index:2;width:62px;height:62px;margin:0 2px;transform:translateY(-8px);border:3px solid rgba(8,15,21,.4);box-shadow:0 7px 18px rgba(255,107,87,.36),0 0 0 1px rgba(255,255,255,.16)}.dock-fit{min-width:62px;padding:0 8px;background:rgba(255,255,255,.045)}.dock-settings{min-width:76px;padding:0 8px;border-left-color:rgba(220,235,245,.14)}.now{min-width:82px;max-width:130px;padding:0 5px}
+@media(max-width:560px){.dock{gap:2px;padding:3px 5px;border-radius:16px}.dock-channel,.dock-skip,.dock-fit,.dock-settings{height:40px}.dock-channel{min-width:42px;padding:0 7px}.dock-skip{width:34px}.dock-play{width:58px;height:58px;margin:0 1px;transform:translateY(-7px)}.dock-fit{min-width:54px;padding:0 6px}.dock-settings{min-width:64px;padding:0 6px}.now{min-width:52px;max-width:22vw;padding:0 3px}}
