@@ -53,6 +53,21 @@ const fetchUpstream = async (initial) => {
 
 const proxyPath = (v) => `/api/proxy?url=${encodeURIComponent(v)}`;
 
+const isManifest = (contentType, url) =>
+  /mpegurl|x-mpegurl/i.test(contentType) || /\.m3u8?(?:$|[?#])/i.test(url);
+
+const isMediaSegment = (contentType, url) =>
+  /\.(ts|m4s|aac|mp4|webm|mp3)(?:$|[?#])/i.test(url) || /^(video|audio)\//i.test(contentType);
+
+const mediaHeaders = (contentType, cacheControl, upstream) => {
+  const headers = { ...cors, "Content-Type": contentType, "Cache-Control": cacheControl };
+  for (const name of ["Content-Length", "Content-Range", "Accept-Ranges", "ETag", "Last-Modified"]) {
+    const value = upstream.headers.get(name);
+    if (value) headers[name] = value;
+  }
+  return headers;
+};
+
 const rewriteManifest = (source, upstreamUrl) => {
   const base = new URL(upstreamUrl);
   const rewrite = (v) => { try { return proxyPath(new URL(v, base).toString()); } catch { return v; } };
@@ -83,14 +98,26 @@ async function handleProxy(request, url) {
     }
     if (!up.ok) return new Response(await up.text(), { status: up.status, headers: { ...cors, "Content-Type": contentType, "Cache-Control": "no-store" } });
 
-    if (/mpegurl|x-mpegurl/i.test(contentType) || /\.m3u8(?:$|\?)/i.test(resolvedUrl)) {
+    if (isManifest(contentType, resolvedUrl)) {
       const source = await up.text();
       const isHls = /\.m3u8(?:$|\?)/i.test(resolvedUrl) || /#EXT-X-/i.test(source);
       const body = isHls ? rewriteManifest(source, resolvedUrl) : source;
-      return new Response(body, { status: 200, headers: { ...cors, "Content-Type": isHls ? "application/vnd.apple.mpegurl" : contentType, "Cache-Control": "no-store" } });
+      return new Response(body, {
+        status: 200,
+        headers: {
+          ...cors,
+          "Content-Type": isHls ? "application/vnd.apple.mpegurl" : contentType,
+          "Cache-Control": isHls ? "public, s-maxage=5, max-age=2, stale-while-revalidate=10" : "no-store",
+        },
+      });
     }
 
-    return new Response(up.body, { status: up.status, headers: { ...cors, "Content-Type": contentType, "Cache-Control": "no-store" } });
+    return new Response(up.body, {
+      status: up.status,
+      headers: isMediaSegment(contentType, resolvedUrl)
+        ? mediaHeaders(contentType, "public, s-maxage=3600, max-age=60", up)
+        : { ...cors, "Content-Type": contentType, "Cache-Control": "no-store" },
+    });
   } catch (e) {
     return json({ error: "upstream_unreachable", message: e instanceof Error ? e.message : "Proxy request failed" }, 502);
   }
