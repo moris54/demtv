@@ -107,11 +107,8 @@ function App() {
       let repaired = saved.map(repairPlaylist);
       if (!repaired.length) {
         try {
-          const response = await fetch(proxyUrl(DEFAULT_URL));
-          if (response.ok) {
-            const channels = parseM3U(await response.text(), DEFAULT_URL);
-            repaired = [{ id: "default-turk", name: "Türk Kanalları", url: DEFAULT_URL, channels, updatedAt: new Date().toISOString() }];
-          }
+          const channels = await fetchList(DEFAULT_URL);
+          repaired = [{ id: "default-turk", name: "Türk Kanalları", url: DEFAULT_URL, channels, updatedAt: new Date().toISOString() }];
         } catch { /* varsayılan liste başarısızsa kullanıcı yine manuel ekleyebilir */ }
       }
       setPlaylists(repaired); setActiveId(repaired[0]?.id); setSelected(pickInitialChannel(repaired[0]?.channels || [])); setPanelOpen(true); setHydrated(true);
@@ -149,7 +146,24 @@ function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [channels, libraryOpen, selected, wake]);
   const show = (type: "error" | "success", text: string) => { setNotice({ type, text }); window.clearTimeout(noticeTimer.current); noticeTimer.current = window.setTimeout(() => setNotice(undefined), 5000); };
-  const fetchList = async (sourceUrl: string) => { const response = await fetch(proxyUrl(sourceUrl)); if (!response.ok) throw new Error(`Liste alınamadı (${response.status}).`); return parseM3U(await response.text(), sourceUrl); };
+  const fetchList = async (sourceUrl: string) => {
+    let directError: unknown;
+    try {
+      const directResponse = await fetch(sourceUrl, { mode: "cors" });
+      if (directResponse.ok) return parseM3U(await directResponse.text(), sourceUrl);
+      directError = new Error(`Doğrudan liste isteği başarısız (${directResponse.status}).`);
+    } catch (error) {
+      directError = error;
+    }
+
+    try {
+      const proxyResponse = await fetch(proxyUrl(sourceUrl));
+      if (!proxyResponse.ok) throw new Error(`Liste alınamadı (${proxyResponse.status}).`);
+      return parseM3U(await proxyResponse.text(), sourceUrl);
+    } catch (proxyError) {
+      throw proxyError instanceof Error ? proxyError : directError instanceof Error ? directError : new Error("Liste alınamadı.");
+    }
+  };
   const addPlaylist = async () => {
     const sourceUrl = url.trim();
     if (!sourceUrl) return show("error", "Önce bir M3U veya M3U8 bağlantısı gir.");
