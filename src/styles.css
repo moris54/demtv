@@ -35,10 +35,11 @@ button{cursor:pointer}
 /* Dock */
 .dock{position:absolute;z-index:20;left:50%;bottom:max(18px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;align-items:center;gap:5px;padding:6px 7px;border-radius:22px;background:rgba(8,15,21,.78);border:1px solid rgba(220,235,245,.2);backdrop-filter:blur(22px) saturate(1.25);box-shadow:0 14px 38px rgba(0,0,0,.5),inset 0 1px rgba(255,255,255,.06);transition:opacity .25s,transform .25s;white-space:nowrap}
 .asleep .dock{opacity:0;transform:translate(-50%,8px);pointer-events:none}
-.dock-channel,.dock-skip,.dock-play,.dock-fit,.dock-settings{border:0;color:var(--text);display:grid;place-items:center;background:transparent}
+.dock-channel,.dock-skip,.dock-play,.dock-youtube,.dock-fit,.dock-settings{border:0;color:var(--text);display:grid;place-items:center;background:transparent}
 .dock-channel{height:52px;padding:0 15px;display:flex;align-items:center;gap:7px;border-radius:16px;font-size:13px;font-weight:700}.dock-channel:hover,.dock-channel.on{background:var(--accent);color:var(--accent-ink)}
 .dock-skip{width:45px;height:48px;border-radius:14px;color:#becbd3}.dock-skip:hover{background:rgba(255,255,255,.08);color:var(--text)}
 .dock-play{width:54px;height:54px;border-radius:50%;background:var(--accent);color:var(--accent-ink);box-shadow:0 5px 15px rgba(255,107,87,.3)}
+.dock-youtube{height:44px;display:flex;align-items:center;gap:6px;padding:0 11px;border-radius:13px;color:#ff8f87;font-size:11px;font-weight:700}.dock-youtube:hover{background:rgba(255,107,87,.16);color:#ffb0a8}
 .dock-fit{height:44px;padding:0 12px;border-radius:13px;color:#c7d2d9;font-size:11px;font-weight:700}.dock-fit.on,.dock-fit:hover{background:rgba(255,255,255,.1);color:var(--text)}
 .dock-settings{width:40px;height:44px;border-left:1px solid rgba(220,235,245,.12);color:var(--muted)}
 .now{min-width:100px;display:flex;flex-direction:column;gap:2px;padding:0 9px;max-width:190px}
@@ -121,7 +122,7 @@ button{cursor:pointer}
 .device-note{display:block;padding-top:4px;color:var(--muted);font-size:12px;line-height:1.45}
 
 @media(max-width:560px){
-  .dock{bottom:12px;max-width:calc(100% - 14px);gap:2px;padding:5px}.dock-channel{height:48px;padding:0 11px}.dock-channel span{display:none}.dock-skip{width:38px;height:46px}.dock-play{width:50px;height:50px}.dock-fit{padding:0 8px}.dock-settings{width:34px}.now{max-width:28vw;min-width:64px}
+  .dock{bottom:12px;max-width:calc(100% - 14px);gap:2px;padding:5px}.dock-channel{height:48px;padding:0 11px}.dock-channel span{display:none}.dock-skip{width:38px;height:46px}.dock-play{width:50px;height:50px}.dock-youtube{padding:0 8px}.dock-youtube span{display:none}.dock-fit{padding:0 8px}.dock-settings{width:34px}.now{max-width:28vw;min-width:64px}
   .now{max-width:34vw}.panel{width:100%;border-right:0}.virtual-row{right:0}.card{height:136px}.logo{padding:9px}
   .logo{padding:9px}.modal{padding:18px}.player-actions{right:12px;bottom:12px}.player-control{height:48px}.player-control span{display:none}
 }
