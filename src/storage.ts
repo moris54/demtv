@@ -21,8 +21,19 @@ const PREFS_STORE = "preferences";
 const PREFS_ID = "user";
 const LEGACY_KEY = "m3u-stream-playlists";
 const DEFAULT_PREFS: UserPrefs = { favorites: [], recent: [], hidden: [], carMode: true, sort: "default", theme: "current" };
+const normalizePrefs = (value: Partial<UserPrefs> | undefined): UserPrefs => ({
+  ...DEFAULT_PREFS,
+  ...value,
+  favorites: Array.isArray(value?.favorites) ? value!.favorites : [],
+  recent: Array.isArray(value?.recent) ? value!.recent : [],
+  hidden: Array.isArray(value?.hidden) ? value!.hidden : [],
+  carMode: typeof value?.carMode === "boolean" ? value.carMode : DEFAULT_PREFS.carMode,
+  sort: value?.sort === "name" || value?.sort === "recent" ? value.sort : DEFAULT_PREFS.sort,
+  theme: value?.theme === "midnight" || value?.theme === "glass" || value?.theme === "ember" ? value.theme : DEFAULT_PREFS.theme,
+});
 
 const openDb = () => new Promise<IDBDatabase>((resolve, reject) => {
+  if (typeof indexedDB === "undefined") { reject(new Error("IndexedDB desteklenmiyor.")); return; }
   const request = indexedDB.open(DB_NAME, 2);
   request.onupgradeneeded = () => {
     const db = request.result;
@@ -31,6 +42,7 @@ const openDb = () => new Promise<IDBDatabase>((resolve, reject) => {
   };
   request.onsuccess = () => resolve(request.result);
   request.onerror = () => reject(request.error || new Error("Cihaz depolaması açılamadı."));
+  request.onblocked = () => reject(new Error("Cihaz depolaması başka bir sekmede meşgul."));
 });
 
 const legacyPlaylists = (): StoredPlaylist[] => {
@@ -67,7 +79,7 @@ export async function loadPrefs(): Promise<UserPrefs> {
     const db = await openDb();
     return await new Promise<UserPrefs>((resolve) => {
       const request = db.transaction(PREFS_STORE, "readonly").objectStore(PREFS_STORE).get(PREFS_ID);
-      request.onsuccess = () => resolve({ ...DEFAULT_PREFS, ...(request.result?.value || {}) });
+      request.onsuccess = () => resolve(normalizePrefs(request.result?.value));
       request.onerror = () => resolve(DEFAULT_PREFS);
     });
   } catch { return DEFAULT_PREFS; }

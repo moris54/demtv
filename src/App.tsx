@@ -43,9 +43,13 @@ function VirtualChannelGrid({ channels, selected, onSelect }: { channels: Channe
     if (!element) return;
     const update = () => setMetrics((current) => ({ ...current, width: element.clientWidth, height: element.clientHeight }));
     update();
-    const observer = new ResizeObserver(update);
-    observer.observe(element);
-    return () => observer.disconnect();
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(update);
+      observer.observe(element);
+      return () => observer.disconnect();
+    }
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
   }, []);
   const compact = metrics.width > 0 && metrics.width < 560;
   const minCard = compact ? 96 : 112;
@@ -100,17 +104,23 @@ function App() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [saved, savedPrefs] = await Promise.all([loadPlaylists<Playlist>(), loadPrefs()]);
-      if (!alive) return;
-      setPrefs(savedPrefs);
-      let repaired = saved.map(repairPlaylist);
-      if (!repaired.length) {
-        try {
-          const channels = await fetchList(DEFAULT_URL);
-          repaired = [{ id: "default-turk", name: "Türk Kanalları", url: DEFAULT_URL, channels, updatedAt: new Date().toISOString() }];
-        } catch { /* varsayılan liste başarısızsa kullanıcı yine manuel ekleyebilir */ }
+      try {
+        const [saved, savedPrefs] = await Promise.all([loadPlaylists<Playlist>(), loadPrefs()]);
+        if (!alive) return;
+        setPrefs(savedPrefs);
+        let repaired = saved.map(repairPlaylist);
+        if (!repaired.length) {
+          try {
+            const channels = await fetchList(DEFAULT_URL);
+            repaired = [{ id: "default-turk", name: "Türk Kanalları", url: DEFAULT_URL, channels, updatedAt: new Date().toISOString() }];
+          } catch { /* varsayılan liste başarısızsa kullanıcı yine manuel ekleyebilir */ }
+        }
+        if (!alive) return;
+        setPlaylists(repaired); setActiveId(repaired[0]?.id); setSelected(pickInitialChannel(repaired[0]?.channels || [])); setPanelOpen(true); setHydrated(true);
+      } catch {
+        if (!alive) return;
+        setPlaylists([]); setActiveId(undefined); setSelected(undefined); setPanelOpen(true); setHydrated(true);
       }
-      setPlaylists(repaired); setActiveId(repaired[0]?.id); setSelected(pickInitialChannel(repaired[0]?.channels || [])); setPanelOpen(true); setHydrated(true);
     })();
     return () => { alive = false; };
   }, []);
