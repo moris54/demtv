@@ -259,3 +259,7 @@ button{cursor:pointer}
   .fill-toggle{right:10px;bottom:max(10px,env(safe-area-inset-bottom));height:44px;padding:0 12px}
   .dock{padding:4px 5px}.dock-play{width:62px;height:62px;transform:translateY(-7px)}.dock-channel{min-width:48px;padding:0 8px}.dock-skip{width:38px}.dock-settings{min-width:54px;padding:0 7px}.now{min-width:58px;max-width:24vw}
 }
+
+/* Favorites and personal ordering */
+.card-actions{position:absolute;z-index:4;top:6px;right:6px;display:flex;align-items:center;gap:3px}.card-actions .card-favorite{position:static;width:30px;height:30px}.card-favorite.on{background:rgba(255,179,95,.16);color:#ffc26e}.favorite-order{display:flex;flex-direction:column;gap:2px}.favorite-order button{width:24px;height:14px;display:grid;place-items:center;padding:0;border:1px solid rgba(220,235,245,.18);border-radius:4px;background:rgba(6,13,18,.7);color:#cbd7df}.favorite-order button:hover{background:var(--accent);color:var(--accent-ink)}.order-hint{align-self:center;color:var(--muted);font-size:10px;white-space:nowrap}
+@media(max-width:560px){.card-actions{top:4px;right:4px}.card-actions .card-favorite{width:28px;height:28px}.favorite-order button{width:22px;height:14px}.order-hint{display:none}}
